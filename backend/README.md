@@ -3,13 +3,25 @@
 To install dependencies:
 
 ```bash
-bun install
+pnpm install
 ```
 
-To run:
+To run development:
 
 ```bash
-bun run index.ts
+pnpm dev
 ```
 
-This project was created using `bun init` in bun v1.3.13. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+To run production:
+
+```bash
+pnpm start
+```
+
+To type-check:
+
+```bash
+pnpm build
+```
+
+Note: Requires Node.js v18+ and pnpm. Copy `.env.example` to `.env` before running.

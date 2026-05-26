@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
-import User from "../models/user";
-import { generateToken } from "../utils/generateToken";
-import { logActivity } from "../utils/activitieslog";
+import User from "../models/user.js";
+import { generateToken } from "../utils/generateToken.js";
+import { logActivity } from "../utils/activitieslog.js";
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -54,7 +54,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             res.status(400).json({ status: "Error!", message: "Invalid user data" });
             return;
         }
-        res.status(201).json({ status: "Success!", message: `User '${newUser.name}' created successfully`, data: newUser });
     } catch (error) {
         res.status(500).json({ status: "Error!", message: "Internal server error" });
     }
@@ -73,15 +72,7 @@ export const login = async (req: Request, res: Response): Promise<void> =>{
         if (user && (await user.matchPassword(password))){
             //generate token
             generateToken(user.id.toString(), res)
-            res.json(user)
-            //totally forgot this part cannot work since "/login" is not a protected route
-            if ((req as any).user){
-                await logActivity({
-                    userId: (req as any).user._id.toString(),
-                    action: "Registered User",
-                    details: `Registered ${user.name} with email ${user.email}` 
-                })
-            }
+            res.json({ _id: user._id, name: user.name, email: user.email, role: user.role });
         }else{
             res.status(401).json({ message: "Invalid email or password"})
         }
@@ -99,7 +90,7 @@ export const login = async (req: Request, res: Response): Promise<void> =>{
 
 export const updateUser = async (req: Request, res: Response) : Promise<void> => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params['id']);
         if (user){
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
@@ -151,7 +142,7 @@ export const updateUser = async (req: Request, res: Response) : Promise<void> =>
 
 export const deleteUser = async (req: Request, res: Response) : Promise<void> => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params['id']);
         if (user){
             await User.deleteOne({ _id: user._id });
             if ((req as any).user) {
@@ -199,7 +190,7 @@ export const getUserProfile = async (req: Request, res: Response) : Promise<void
 // route   POST /api/users/logout
 // access  Public
 
-export const logoutUser = async (req: Request, res: Response) => {
+export const logoutUser = async (_req: Request, res: Response) => {
     try {
         res.cookie("jwt", "", {
             httpOnly: true,
@@ -208,5 +199,23 @@ export const logoutUser = async (req: Request, res: Response) => {
         res.json({ message: "Logged out successfully" });
     } catch (error) {
         res.status(500).json({ status: "Error!", message: `Server error: ${error}` });
+    }
+}
+
+// @desc    Get all users (paginated)
+// @route   GET /api/users
+// @access  Private/Admin
+export const getUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const page = Number(req.query['page']) || 1;
+        const limit = Number(req.query['limit']) || 10;
+        const skip = (page - 1) * limit;
+
+        const total = await User.countDocuments();
+        const users = await User.find().select("-password").sort({ createdAt: -1 }).skip(skip).limit(limit);
+
+        res.json({ users, page, pages: Math.ceil(total / limit), total });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
     }
 }

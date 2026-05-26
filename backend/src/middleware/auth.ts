@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import User, { type IUser, type userRoles } from "../models/user";
+import User, { type IUser, type userRoles } from "../models/user.js";
 
 export interface AuthRequest extends Request {
     user?: IUser;
@@ -14,12 +14,12 @@ export const protect = async (
     let token;
 
     //check for token in cookies, you can also check for token in headers if you want to support both cookie and header authentication
-    if (req.cookies && req.cookies.jwt) {
-        token = req.cookies.jwt; //using .jwt should now allow new user registration to work without any issues, as the token will be sent in the cookie and can be accessed using req.cookies.jwt
+    if (req.cookies && req.cookies['jwt']) {
+        token = req.cookies['jwt']; //using .jwt should now allow new user registration to work without any issues, as the token will be sent in the cookie and can be accessed using req.cookies.jwt
     }
     if (token) {
         try {
-            const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
+            const decoded: any = jwt.verify(token, process.env['JWT_SECRET'] as string);
             req.user = (await User.findById(decoded.userId).select("-password")) as IUser;
             next();
         } catch (error) {

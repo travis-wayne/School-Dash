@@ -9,20 +9,19 @@ import morgan from "morgan";
 import dotenv from "dotenv"
 import cors from "cors";
 import console from "node:console";
-import { connectDB } from "./config/db"; //import the connectDB function to connect to the database
-import userRoutes from "./routes/user";
-import LogsRouter from "./routes/activitieslog";
+import dns from "node:dns";
+import { connectDB } from "./config/db.js"; //import the connectDB function to connect to the database
+import userRoutes from "./routes/user.js";
+import LogsRouter from "./routes/activitieslog.js";
 
-//Add this line to set custom DNS servers for the application, which can help resolve connectivity issues with MongoDB Atlas
-const dns = require("dns");
-dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 // The above line sets the DNS servers to Google's public DNS servers (https://developers.google.com/speed/public-dns), as well as Cloudflare's DNS server (https://developers.cloudflare.com/
 
 //load variables from the .env file
 dotenv.config();
+dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env['PORT'] || 3000;
  
 //next we'll add security middleware/headers + make sure to listen on our *root file* for changes
 app.use(helmet()); // Security middleware to set various HTTP headers for app security
@@ -32,7 +31,7 @@ app.use(cookieParser()); // Middleware to parse cookies
 
 //log http requests to console
 // NODE_ENV missing in .env file, but it is set to "development" by default when running with nodemon, so the morgan middleware will be used for logging HTTP requests in development mode. If you want to explicitly set the NODE_ENV variable, you can add it to your .env file like this: NODE_ENV=development
-if (process.env.NODE_ENV === "development") {
+if (process.env['NODE_ENV'] === "development") {
     //const morgan = require("morgan"); // HTTP request logger middleware
   app.use(morgan("dev")); // HTTP request logger middleware for development
 }
@@ -40,13 +39,13 @@ if (process.env.NODE_ENV === "development") {
 //cross-origin resource sharing (CORS) middleware to allow requests from different origins
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // Allow requests from this origin (your frontend)
+    origin: process.env['CLIENT_URL'], // Allow requests from this origin (your frontend)
     credentials: true // Allow cookies to be sent with requests
 }) 
 );
 
 //Health cheack route to check if the server is running
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", message: "Server is healthy!" });
 });
 
@@ -55,7 +54,7 @@ app.use("/api/users", userRoutes); // Use the user routes for any requests to /a
 app.use("/api/activities", LogsRouter); // Use the user routes for any requests to /api/users
 
 //Global error handling middleware
-app.use((err: Error, req: Request, res: Response, next: Function) => {
+app.use((err: Error, _req: Request, res: Response, _next: Function) => {
   console.error(err.stack);
   res.status(500).json({ status: "Error!", message: err.message });
 });
@@ -67,13 +66,17 @@ app.use((err: Error, req: Request, res: Response, next: Function) => {
 // });
 
 // Start the server and listen on the specified port
-connectDB().then(() => {
+connectDB()
+  .then(() => {
     app.listen(PORT, () => {
     //connectDB(); //connect to the database when the server starts
     console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-})
+  })
+  .catch((err: unknown) => {
+    console.error("Failed to connect to database:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });
 //you can use any of these scripts to run the server with nodemon or bun
   // "scripts": {
   //   "dev": "nodemon --exec bun run index.ts",

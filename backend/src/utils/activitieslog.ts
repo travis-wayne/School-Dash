@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import ActivitiesLog from "../models/activitieslog";
+import ActivitiesLog from "../models/activitieslog.js";
 
 export const logActivity = async ({
     userId,
